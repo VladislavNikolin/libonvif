@@ -144,25 +144,30 @@ int setNetworkInterfaces(struct OnvifData *onvif_data) {
     xmlNodePtr root = xmlNewDocNode(doc, NULL, BAD_CAST "Envelope", NULL);
     xmlDocSetRootElement(doc, root);
     xmlNsPtr ns_env = xmlNewNs(root, BAD_CAST "http://www.w3.org/2003/05/soap-envelope", BAD_CAST "SOAP-ENV");
-    xmlNsPtr ns_tds = xmlNewNs(root, BAD_CAST "http://www.onvif.org/ver10/device/wsdl", BAD_CAST "tds");
-    xmlNsPtr ns_tt = xmlNewNs(root, BAD_CAST "http://www.onvif.org/ver10/schema", BAD_CAST "tt");
+    xmlNsPtr ns_ns0 = xmlNewNs(root, BAD_CAST "http://www.onvif.org/ver10/device/wsdl", BAD_CAST "ns0");
+    xmlNsPtr ns_ns1 = xmlNewNs(root, BAD_CAST "http://www.onvif.org/ver10/schema", BAD_CAST "ns1");
+    xmlNsPtr ns_ns2 = xmlNewNs(root, BAD_CAST "http://www.onvif.org/ver10/schema", BAD_CAST "ns2");
     xmlSetNs(root, ns_env);
     addUsernameDigestHeader(root, ns_env, onvif_data->username, onvif_data->password, onvif_data->time_offset);
     xmlNodePtr body = xmlNewTextChild(root, ns_env, BAD_CAST "Body", NULL);
-    xmlNodePtr setNetworkInterfaces = xmlNewTextChild(body, ns_tds, BAD_CAST "SetNetworkInterfaces", NULL);
-    xmlNewTextChild(setNetworkInterfaces, ns_tt, BAD_CAST "InterfaceToken", BAD_CAST onvif_data->networkInterfaceName);
-    xmlNodePtr networkInterface = xmlNewTextChild(setNetworkInterfaces, ns_tt, BAD_CAST "NetworkInterface", NULL);
-    xmlNodePtr ipv4 = xmlNewTextChild(networkInterface, ns_tt, BAD_CAST "IPv4", NULL);
+    xmlNodePtr setNetworkInterfaces = xmlNewTextChild(body, ns_ns0, BAD_CAST "SetNetworkInterfaces", NULL);
+    xmlNewTextChild(setNetworkInterfaces, ns_ns0, BAD_CAST "InterfaceToken", BAD_CAST onvif_data->networkInterfaceName);
+    xmlNodePtr networkInterface = xmlNewTextChild(setNetworkInterfaces, ns_ns0, BAD_CAST "NetworkInterface", NULL);
+    
     if (onvif_data->dhcp_enabled) {
-        xmlNewTextChild(ipv4, ns_tt, BAD_CAST "DHCP", BAD_CAST "true");
+        xmlNodePtr enabled = xmlNewTextChild(networkInterface, ns_ns1, BAD_CAST "Enabled", NULL);
+        xmlNodePtr ipv4 = xmlNewTextChild(networkInterface, ns_ns2, BAD_CAST "IPv4", NULL);
+        xmlNewTextChild(ipv4, ns_ns2, BAD_CAST "DHCP", BAD_CAST "true");
     }
     else {
-        xmlNewTextChild(ipv4, ns_tt, BAD_CAST "DHCP", BAD_CAST "false");
-        xmlNodePtr manual = xmlNewTextChild(ipv4, ns_tt, BAD_CAST "Manual", NULL);
-        xmlNewTextChild(manual, ns_tt, BAD_CAST "Address" , BAD_CAST onvif_data->ip_address_buf);
+        xmlNodePtr ipv4 = xmlNewTextChild(networkInterface, ns_ns1, BAD_CAST "IPv4", NULL);
+        //xmlNodePtr enabled = xmlNewTextChild(ipv4, ns_ns1, BAD_CAST "Enabled", NULL);
+        xmlNodePtr manual = xmlNewTextChild(ipv4, ns_ns1, BAD_CAST "Manual", NULL);
+        xmlNewTextChild(manual, ns_ns1, BAD_CAST "Address" , BAD_CAST onvif_data->ip_address_buf);
         char prefix_length_buf[128];
         sprintf(prefix_length_buf, "%d", onvif_data->prefix_length);
-        xmlNewTextChild(manual, ns_tt, BAD_CAST "PrefixLength", BAD_CAST prefix_length_buf);
+        xmlNewTextChild(manual, ns_ns1, BAD_CAST "PrefixLength", BAD_CAST prefix_length_buf);
+        xmlNewTextChild(ipv4, ns_ns1, BAD_CAST "DHCP", BAD_CAST "false");
     }
     char cmd[4096] = {0};
     addHttpHeader(doc, root, onvif_data->xaddrs, onvif_data->device_service, cmd, 4096);
